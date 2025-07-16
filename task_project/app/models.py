@@ -27,11 +27,18 @@ class Project(models.Model):
         related_name='projects',
     )
     project_name = models.CharField(max_length=100)
-    scheduled_start = models.DateTimeField()
-    sheduled_end = models.DateTimeField()
-    achievement_start = models.DateTimeField()
-    achievement_end =models.DateTimeField()
-    status = models.CharField(max_length=50)
+    scheduled_start = models.DateTimeField(null=True, blank=True)
+    scheduled_end = models.DateTimeField(null=True, blank=True)
+    achievement_start = models.DateTimeField(null=True, blank=True)
+    achievement_end =models.DateTimeField(null=True, blank=True)
+    
+    STATUS_CHOICES = [
+    ('not_started', '未着手'),
+    ('in_progress', '進行中'),
+    ('completed', '完了'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -50,11 +57,18 @@ class Task(models.Model):
         related_name='tasks',
     )
     task_name = models.CharField(max_length=100)
-    scheduled_start = models.DateTimeField()
-    sheduled_end = models.DateTimeField()
-    achievement_start = models.DateTimeField()
-    achievement_end =models.DateTimeField()
-    status = models.CharField(max_length=50)
+    scheduled_start = models.DateTimeField(null=True, blank=True)
+    scheduled_end = models.DateTimeField(null=True, blank=True)
+    achievement_start = models.DateTimeField(null=True, blank=True)
+    achievement_end =models.DateTimeField(null=True, blank=True)
+    
+    STATUS_CHOICES = [
+    ('not_started', '未着手'),
+    ('in_progress', '進行中'),
+    ('completed', '完了'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

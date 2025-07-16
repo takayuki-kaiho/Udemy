@@ -11,6 +11,7 @@ from .models import(
 )
 from django.urls import reverse_lazy
 from django.utils.functional import SimpleLazyObject
+from django.shortcuts import get_object_or_404
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
@@ -23,9 +24,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
         project_name = self.request.GET.get('project_name')
         project_status = self.request.GET.get('status')
         if project_name:
-            query = query.filter(
-                project_name=project_name
-            )
+            query.filter(project_name__icontains=project_name)
         if project_status:
             query = query.filter(
                 status=project_status
@@ -49,7 +48,32 @@ class ProjectListView(LoginRequiredMixin, ListView):
         context['descending'] = scheduled_start == '2'
         return context
 
-#タスク
+class ProjectCreateView(LoginRequiredMixin, CreateView):
+    model = Project
+    fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    template_name = 'app/add_project.html'
+    success_url = reverse_lazy('app:project_list')
+    
+    def form_valid(self, form):
+        form.instance.user_id = self.request.user 
+        return super().form_valid(form)
+    
+
+class ProjectUpdateView(LoginRequiredMixin, UpdateView):
+    model = Project
+    fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    template_name = 'app/update_project.html'
+    def get_success_url(self):
+        # return reverse_lazy('app:project_list', kwargs={'user_id': UpdateView.self.object.pk})
+        return reverse_lazy('app:project_list')
+
+class ProjectDeleteView(DeleteView):
+    model = Project
+    # fields = ['project_name']
+    template_name = 'app/delete_project.html'
+    success_url = reverse_lazy('app:project_list')
+    
+    #タスク
 class TaskListView(LoginRequiredMixin, ListView):
     model = Task
     template_name = 'app/task.html'
@@ -57,7 +81,8 @@ class TaskListView(LoginRequiredMixin, ListView):
     paginate_by = 10
     
     def get_queryset(self):
-        query = super().get_queryset()
+        project_id = self.kwargs.get('project_id')
+        query = super().get_queryset().filter(project_id=project_id)
         task_name = self.request.GET.get('task_name')
         task_status = self.request.GET.get('status')
         if task_name:
@@ -77,6 +102,10 @@ class TaskListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        project_id = self.kwargs.get('project_id')
+        project = get_object_or_404(Project, pk=project_id)
+        
+        context['project'] = project  # ← これを追加
         context['task_name'] = self.request.GET.get('task_name', '')
         context['status'] = self.request.GET.get('status', '')
         scheduled_start = self.request.GET.get('scheduled_start', '0')
@@ -84,27 +113,39 @@ class TaskListView(LoginRequiredMixin, ListView):
         context['ascending'] = scheduled_start == '1'
         context['descending'] = scheduled_start == '2'
         return context
-
-class ProjectCreateView(LoginRequiredMixin, CreateView):
-    model = Project
-    fields = ['project_name', 'scheduled_start', 'sheduled_end', 'achievement_start', 'achievement_end', 'status']
-    template_name = 'app/add_project.html'
-    success_url = reverse_lazy('app:project_list')
+        
+class TaskCreateView(LoginRequiredMixin, CreateView):
+    model = Task
+    fields = ['task_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    template_name = 'app/add_task.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        context['project'] = project
+        return context
+
     def form_valid(self, form):
-        form.instance.user_id = self.request.user 
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        form.instance.project_id = project
         return super().form_valid(form)
-    
 
-class ProjectUpdateView(UpdateView):
-    model = Project
-    fields = ['project_name', 'scheduled_start', 'sheduled_end', 'achievement_start', 'achievement_end', 'status']
-    template_name = 'app/update_project.html'
     def get_success_url(self):
-        return reverse_lazy('app:project_list', kwargs={'user_id': UpdateView.object.pk})
+        return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})
 
-class ProjectDeleteView(UpdateView):
-    model = Project
-    fields = ['project_name']
-    template_name = 'app/delete_project.html'
-    success_url = reverse_lazy('app:project_list')
+
+
+class TaskUpdateView(UpdateView):
+    model = Task
+    fields = ['task_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    template_name = 'app/update_task.html'
+    def get_success_url(self):
+        return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})
+
+class TaskDeleteView(DeleteView):
+    model = Task
+    #fields = ['task_name']
+    template_name = 'app/delete_task.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})

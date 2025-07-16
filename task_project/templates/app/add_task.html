@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>新しいタスクを追加</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="project_id" value="{{ project_id }}">
+    <button type="submit">保存</button>
+  </form>
+
+  {% if project_id %}
+    <a href="{% url 'app:add_task' project_id=project.id %}">新しいタスクを追加</a>
+  {% else %}
+    <p>戻る</p>
+  {% endif %}
+{% endblock %}

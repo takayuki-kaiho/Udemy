@@ -27,9 +27,11 @@
             <input type="submit" value="実行" />
         </p>
       </form>
-        <input type="submit" value="新規登録" />
-        <input type="submit" value="追加更新" />
-        <input type="submit" value="削除" />
+      <form method="get" action="{% url 'app:add_task' project_id=project.id %}">
+          <input type="submit" value="新規登録" />
+      </form>
+      <button onclick="goToUpdateTask()">追加更新</button>
+      <button onclick="goToDeleteTask()">削除</button>
     <table class="table table-striped table-borderd">
         <thead>
               <tr>
@@ -43,10 +45,10 @@
               </tr>
         </thead>
         <tbody>
-            {% for project in projects %}
+            {% for task in tasks %}
                 <tr>
                     <td><input type="checkbox" name="selected_task" value="{{ task.id }}"></td>
-                    <td><a href="{% url 'app:task' pk=task.id %}">{{ task.task_name }}</a></td>
+                    <td><a href="{% url 'app:task' project_id=task.project.id %}">{{ task.task_name }}</a></td>
                     <td>{{ task.scheduled_start }}</td>
                     <td>{{ task.sheduled_end }}</td>
                     <td>{{ task.achievement_start }}</td>
@@ -57,4 +59,33 @@
         </tbody>
     </table>
 </div>
+
+<script>
+function getSelectedTaskId() {
+    const checkboxes = document.querySelectorAll('input[name="selected_task"]:checked');
+    if (checkboxes.length === 0) {
+        alert("タスクを選択してください。");
+        return null;
+    }
+    if (checkboxes.length > 1) {
+        alert("1件だけ選択してください。");
+        return null;
+    }
+    return checkboxes[0].value;
+}
+
+function goToUpdateTask() {
+    const taskId = getSelectedTaskId();
+    if (taskId) {
+        window.location.href = `/app/update_task/${taskId}`;
+    }
+}
+
+function goToDeleteTask() {
+    const taskId = getSelectedTaskId();
+    if (taskId) {
+        window.location.href = `/app/delete_task/${taskId}`;
+    }
+}
+</script>
 {% endblock %}
