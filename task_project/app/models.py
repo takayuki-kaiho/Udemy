@@ -33,9 +33,9 @@ class Project(models.Model):
     achievement_end =models.DateTimeField(null=True, blank=True)
     
     STATUS_CHOICES = [
-    ('not_started', '未着手'),
-    ('in_progress', '進行中'),
-    ('completed', '完了'),
+    ('未着手', '未着手'),
+    ('進行中', '進行中'),
+    ('完了', '完了'),
     ]
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
     
@@ -63,9 +63,9 @@ class Task(models.Model):
     achievement_end =models.DateTimeField(null=True, blank=True)
     
     STATUS_CHOICES = [
-    ('not_started', '未着手'),
-    ('in_progress', '進行中'),
-    ('completed', '完了'),
+    ('未着手', '未着手'),
+    ('進行中', '進行中'),
+    ('完了', '完了'),
     ]
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
     

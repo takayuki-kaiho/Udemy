@@ -112,7 +112,9 @@ class TaskListView(LoginRequiredMixin, ListView):
         context['scheduled_start'] = scheduled_start
         context['ascending'] = scheduled_start == '1'
         context['descending'] = scheduled_start == '2'
+        # context['project_id'] = self.kwargs.get('project_id')
         return context
+
         
 class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
