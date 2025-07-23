@@ -5,4 +5,11 @@
     {{ form.as_p }}
     <input type="submit" value="ログイン">
 </form>
+
+<!-- 新規登録リンク追加 -->
+<div class="mt-3">
+    <p>アカウントをお持ちでない方はこちら：</p>
+    <a href="{% url 'accounts:register' %}" class="btn btn-outline-secondary">新規登録</a>
+</div>
 {% endblock %}
+
