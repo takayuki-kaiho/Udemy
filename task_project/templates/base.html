@@ -16,8 +16,9 @@
                 <a class="nav-link" href="{% url 'accounts:user_update' %}">ユーザー編集</a>
                 <a class="nav-link" href="#" id="logout-link">ログアウト</a>
             {% else %}
-                <a class="nav-link" href="{% url 'accounts:user_login_2' %}">ログイン</a>
-                <a class="nav-link" href="{% url 'accounts:register' %}">ユーザー登録</a>
+                <a class="nav-link" href="/accounts/home/">ホーム</a>
+                {% comment %} <a class="nav-link" href="{% url 'accounts:user_login_2' %}">ログイン</a> {% endcomment %}
+                {% comment %} <a class="nav-link" href="{% url 'accounts:register' %}">ユーザー登録</a> {% endcomment %}
             {% endif %}
         </div>
     </div>

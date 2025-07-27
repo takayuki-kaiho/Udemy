@@ -4,10 +4,42 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 
+# class UserUpdateForm(forms.ModelForm):
+#     class Meta:
+#         model = User
+#         fields = ['username', 'email', 'password']
+        
+        
 class UserUpdateForm(forms.ModelForm):
+    password = forms.CharField(
+        label='パスワード',
+        widget=forms.PasswordInput(),
+        required=False,  # 入力がなければ変更しないように
+    )
+
     class Meta:
         model = User
-        fields = ['username', 'email']
+        fields = ['username', 'email', 'password']
+        labels = {
+            'username': '名前',
+            'email': 'メールアドレス',
+            'password': 'パスワード',
+        }
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password:
+            validate_password(password, self.instance)
+        return password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        password = self.cleaned_data.get('password')
+        if password:
+            user.set_password(password)  # プレーンパスワードをハッシュ化
+        if commit:
+            user.save()
+        return user
 
 class RegistForm(forms.ModelForm):
 

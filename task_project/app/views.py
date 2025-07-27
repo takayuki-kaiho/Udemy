@@ -12,41 +12,70 @@ from .models import(
 from django.urls import reverse_lazy
 from django.utils.functional import SimpleLazyObject
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 
+# class ProjectListView(LoginRequiredMixin, ListView):
+#     model = Project
+#     template_name = 'app/project_list.html'
+#     context_object_name = 'projects'
+#     paginate_by = 10
+    
+#     def get_queryset(self):
+#         query = super().get_queryset()
+#         project_name = self.request.GET.get('project_name')
+#         project_status = self.request.GET.get('status')
+#         if project_name:
+#             query.filter(project_name__icontains=project_name)
+#         if project_status:
+#             query = query.filter(
+#                 status=project_status
+#             )
+#         scheduled_start =self.request.GET.get('scheduled_start', '0')
+#         if scheduled_start == '1':
+#             query = query.order_by('scheduled_start')
+#         elif scheduled_start == '2':
+#             query = query.order_by('-scheduled_start')
+#         else:
+#             query = query.order_by('-id')
+#         return query
+    
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['project_name'] = self.request.GET.get('project_name', '')
+#         context['status'] = self.request.GET.get('status', '')
+#         scheduled_start = self.request.GET.get('scheduled_start', '0')
+#         context['scheduled_start'] = scheduled_start
+#         context['ascending'] = scheduled_start == '1'
+#         context['descending'] = scheduled_start == '2'
+#         return context
+    
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'app/project_list.html'
     context_object_name = 'projects'
     paginate_by = 10
-    
+
     def get_queryset(self):
-        query = super().get_queryset()
+        user = self.request.user
+        query = super().get_queryset().filter(user_id=user)
+
         project_name = self.request.GET.get('project_name')
         project_status = self.request.GET.get('status')
+
         if project_name:
-            query.filter(project_name__icontains=project_name)
+            query = query.filter(project_name__icontains=project_name)
         if project_status:
-            query = query.filter(
-                status=project_status
-            )
-        scheduled_start =self.request.GET.get('scheduled_start', '0')
+            query = query.filter(status=project_status)
+
+        scheduled_start = self.request.GET.get('scheduled_start', '0')
         if scheduled_start == '1':
             query = query.order_by('scheduled_start')
         elif scheduled_start == '2':
             query = query.order_by('-scheduled_start')
         else:
             query = query.order_by('-id')
+
         return query
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['project_name'] = self.request.GET.get('project_name', '')
-        context['status'] = self.request.GET.get('status', '')
-        scheduled_start = self.request.GET.get('scheduled_start', '0')
-        context['scheduled_start'] = scheduled_start
-        context['ascending'] = scheduled_start == '1'
-        context['descending'] = scheduled_start == '2'
-        return context
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = Project
@@ -57,6 +86,11 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user_id = self.request.user 
         return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['hide_nav'] = True
+        return context
     
 
 class ProjectUpdateView(LoginRequiredMixin, UpdateView):
@@ -124,7 +158,8 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        context['project'] = project
+        context['project_id'] = self.kwargs['project_id']
+        context['hide_nav'] = True
         return context
 
     def form_valid(self, form):
@@ -144,10 +179,22 @@ class TaskUpdateView(UpdateView):
     def get_success_url(self):
         return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project_id'] = self.object.project_id.id # タスクが紐づいているプロジェクトID
+        return context
+
 class TaskDeleteView(DeleteView):
     model = Task
-    #fields = ['task_name']
     template_name = 'app/delete_task.html'
     
     def get_success_url(self):
-        return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})
+        project_id = self.object.project_id.id
+        return reverse('app:task', kwargs={'project_id': project_id})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        task = self.get_object()
+        context['task'] = task  # 明示的にtaskをテンプレートへ渡す
+        context['project_id'] = task.project_id.id     # ← ここでproject_idも追加
+        return context

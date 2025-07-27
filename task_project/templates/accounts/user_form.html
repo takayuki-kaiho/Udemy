@@ -2,11 +2,43 @@
 
 {% block content %}
 <div class="container mt-5">
-  <h2>ユーザー情報の編集</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">更新</button>
-  </form>
+  <h2 class="text-center mb-4">ユーザー情報編集</h2>
+
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <form method="post" class="border p-4 shadow rounded bg-light">
+        {% csrf_token %}
+
+        <!-- 名前 -->
+        <div class="mb-3 row">
+          <label for="{{ form.username.id_for_label }}" class="col-sm-4 col-form-label text-end">名前:</label>
+          <div class="col-sm-8">
+            {{ form.username }}
+          </div>
+        </div>
+
+        <!-- メール -->
+        <div class="mb-3 row">
+          <label for="{{ form.email.id_for_label }}" class="col-sm-4 col-form-label text-end">メールアドレス:</label>
+          <div class="col-sm-8">
+            {{ form.email }}
+          </div>
+        </div>
+
+        <!-- パスワード -->
+        <div class="mb-3 row">
+          <label for="{{ form.password.id_for_label }}" class="col-sm-4 col-form-label text-end">パスワード:</label>
+          <div class="col-sm-8">
+            {{ form.password }}
+          </div>
+        </div>
+
+        <!-- ボタン -->
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-success px-4">更新</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

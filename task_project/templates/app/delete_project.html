@@ -1,6 +1,24 @@
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <p>{{ project.name }}削除してもよろしいでしょうか？</p>
-    <input type='submit' value='削除'>
-</form>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">プロジェクトを削除</h2>
+
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <form method="POST" class="text-center">
+        {% csrf_token %}
+        <p class="mb-4"><strong>{{ project.project_name }}</strong> を削除してもよろしいですか？</p>
+
+        <!-- 削除ボタン -->
+        <button type="submit" class="btn btn-danger">削除</button>
+
+        <!-- 戻るボタン -->
+        <div class="mt-3">
+          <a href="{% url 'app:project_list' %}" class="btn btn-secondary">戻る</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

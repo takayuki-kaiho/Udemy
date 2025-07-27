@@ -16,8 +16,13 @@ from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import UpdateView
 from django.urls import reverse_lazy
-from django.contrib.auth.models import User
 from .forms import UserUpdateForm
+from django.contrib.auth import update_session_auth_hash
+# from django.contrib.auth.models import User
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 
 class HomeView(FormView):
     # template_name = 'home.html'
@@ -25,15 +30,33 @@ class HomeView(FormView):
     form_class = UserLoginForm
     success_url = reverse_lazy('app:project_list')
 
+    # def form_valid(self, form):
+    #     email = form.cleaned_data['email']
+    #     password = form.cleaned_data['password']
+    #     try:
+    #         user_obj = User.objects.get(email=email)
+    #         user = authenticate(self.request, username=user_obj.username, password=password)
+    #     except User.DoesNotExist:
+    #         user = None
+
+    #     if user is not None:
+    #         login(self.request, user)
+    #         return super().form_valid(form)
+    #     form.add_error(None, "メールアドレスかパスワードが正しくありません。")
+    #     return self.form_invalid(form)
     def form_valid(self, form):
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
-        user = authenticate(self.request, email=email, password=password)
+
+        user = authenticate(self.request, username=email, password=password)
+
         if user is not None:
             login(self.request, user)
             return super().form_valid(form)
+    
         form.add_error(None, "メールアドレスかパスワードが正しくありません。")
         return self.form_invalid(form)
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -46,14 +69,26 @@ class RegistUserView(CreateView):
     form_class = RegistForm
     success_url = reverse_lazy('accounts:home')
 
+    def form_valid(self, form):
+        user = form.save(commit=False)
+        user.set_password(form.cleaned_data['password'])  # 明示的にここでも呼ぶ
+        user.save()
+        return super().form_valid(form)
+
 class UserUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UserUpdateForm
     template_name = 'accounts/user_form.html'  # このテンプレートを作成する必要があります
-    success_url = reverse_lazy('accounts:home')  # 適宜変更してください
+    success_url = reverse_lazy('app:project_list')  # 適宜変更してください
 
     def get_object(self):
         return self.request.user  # ログインユーザーの情報を編集する
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # 🔽 パスワードが変わった後もセッションを維持（再認証）
+        update_session_auth_hash(self.request, self.object)
+        return response
 
 class UserLoginView(FormView):
     template_name = 'user_login.html'
@@ -63,10 +98,19 @@ class UserLoginView(FormView):
     def form_valid(self, form):
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
-        user = authenticate(email=email, password=password)
+        try:
+            user_obj = User.objects.get(email=email)
+            user = authenticate(self.request, username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            user = None
+
         if user:
             login(self.request, user)
-        return super().form_valid(form)
+            return super().form_valid(form)
+
+        form.add_error(None, "メールアドレスかパスワードが正しくありません。")
+        return self.form_invalid(form)
+
     
     def get_success_url(self):
         next_url = self.request.GET.get('next')

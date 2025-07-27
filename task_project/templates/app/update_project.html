@@ -1,5 +1,26 @@
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <input type='submit' value='更新'>
-</form>
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h2 class="text-center mb-4">プロジェクトを更新</h2>
+
+    <div class="row justify-content-center">
+      <div class="col-md-6 offset-md-3">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+
+          <!-- 登録ボタン：少し左寄り -->
+          <div class="d-flex justify-content-start mt-4" style="margin-left: 200px;">
+            <button type="submit" class="btn btn-success">更新</button>
+          </div>
+        </form>
+
+        <!-- 戻るボタン：登録ボタンと同じ位置で下に -->
+        <div class="d-flex justify-content-start mt-3" style="margin-left: 200px;">
+          <a href="{% url 'app:project_list' %}" class="btn btn-secondary">戻る</a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
