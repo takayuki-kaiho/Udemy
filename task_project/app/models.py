@@ -63,7 +63,17 @@ class Task(models.Model):
     
     class Meta:
         db_table = 'task'
+        indexes = [
+            models.Index(fields=['project_id', 'scheduled_start']),
+            models.Index(fields=['project_id', 'scheduled_end']),
+        ]
       
     def __str__(self):
         return self.task_name
-    
+
+class Holiday(models.Model):
+    date = models.DateField(unique=True)
+    name = models.CharField(max_length=50, blank=True)
+
+    def __str__(self):
+        return f"{self.date} {self.name}".strip()

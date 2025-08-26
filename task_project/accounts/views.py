@@ -18,7 +18,7 @@ from django.views.generic.edit import UpdateView
 from django.urls import reverse_lazy
 from .forms import UserUpdateForm
 from django.contrib.auth import update_session_auth_hash
-# from django.contrib.auth.models import User
+
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -28,22 +28,8 @@ class HomeView(FormView):
     # template_name = 'home.html'
     template_name = 'home.html'
     form_class = UserLoginForm
-    success_url = reverse_lazy('app:project_list')
+    success_url = reverse_lazy('app:dashboard')
 
-    # def form_valid(self, form):
-    #     email = form.cleaned_data['email']
-    #     password = form.cleaned_data['password']
-    #     try:
-    #         user_obj = User.objects.get(email=email)
-    #         user = authenticate(self.request, username=user_obj.username, password=password)
-    #     except User.DoesNotExist:
-    #         user = None
-
-    #     if user is not None:
-    #         login(self.request, user)
-    #         return super().form_valid(form)
-    #     form.add_error(None, "メールアドレスかパスワードが正しくありません。")
-    #     return self.form_invalid(form)
     def form_valid(self, form):
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
@@ -79,7 +65,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UserUpdateForm
     template_name = 'accounts/user_form.html'  # このテンプレートを作成する必要があります
-    success_url = reverse_lazy('app:project_list')  # 適宜変更してください
+    success_url = reverse_lazy('app:dashboard')  # 適宜変更してください
 
     def get_object(self):
         return self.request.user  # ログインユーザーの情報を編集する

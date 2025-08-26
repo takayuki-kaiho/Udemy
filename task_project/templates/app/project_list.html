@@ -52,6 +52,7 @@
                   <td>開始実績日</td>
                   <td>終了実績日</td>
                   <td>ステータス</td>
+                  <td>タスク数</td> 
               </tr>
         </thead>
         <tbody>
@@ -59,11 +60,12 @@
                 <tr>
                     <td><input type="checkbox" name="selected_project" value="{{ project.id }}"></td>
                     <td><a href="{% url 'app:task' project_id=project.id %}">{{ project.project_name }}</a></td>
-                    <td>{{ project.scheduled_start }}</td>
-                    <td>{{ project.scheduled_end }}</td>
-                    <td>{{ project.achievement_start }}</td>
-                    <td>{{ project.achievement_end }}</td>
+                    <td>{{ project.scheduled_start|date:"Y年m月d日" }}</td>
+                    <td>{{ project.scheduled_end|date:"Y年m月d日" }}</td>
+                    <td>{{ project.achievement_start|date:"Y年m月d日" }}</td>
+                    <td>{{ project.achievement_end|date:"Y年m月d日" }}</td>
                     <td>{{ project.status }}</td>
+                    <td class="text-end">{{ project.task_count|default:"0" }}</td>
                 </tr>
             {% endfor %}
         </tbody>

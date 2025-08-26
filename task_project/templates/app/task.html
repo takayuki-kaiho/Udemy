@@ -55,10 +55,10 @@
                     {% else %}
                         <td>{{ task.task_name }}</td>
                     {% endif %}
-                    <td>{{ task.scheduled_start }}</td>
-                    <td>{{ task.scheduled_end }}</td>
-                    <td>{{ task.achievement_start }}</td>
-                    <td>{{ task.achievement_end }}</td>
+                    <td>{{ task.scheduled_start |date:"Y年m月d日"}}</td>
+                    <td>{{ task.scheduled_end |date:"Y年m月d日"}}</td>
+                    <td>{{ task.achievement_start |date:"Y年m月d日"}}</td>
+                    <td>{{ task.achievement_end |date:"Y年m月d日"}}</td>
                     <td>{{ task.status }}</td>
                 </tr>
             {% endfor %}

@@ -13,42 +13,20 @@ from django.urls import reverse_lazy
 from django.utils.functional import SimpleLazyObject
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from .forms import ProjectForm, TaskForm  
 
-# class ProjectListView(LoginRequiredMixin, ListView):
-#     model = Project
-#     template_name = 'app/project_list.html'
-#     context_object_name = 'projects'
-#     paginate_by = 10
-    
-#     def get_queryset(self):
-#         query = super().get_queryset()
-#         project_name = self.request.GET.get('project_name')
-#         project_status = self.request.GET.get('status')
-#         if project_name:
-#             query.filter(project_name__icontains=project_name)
-#         if project_status:
-#             query = query.filter(
-#                 status=project_status
-#             )
-#         scheduled_start =self.request.GET.get('scheduled_start', '0')
-#         if scheduled_start == '1':
-#             query = query.order_by('scheduled_start')
-#         elif scheduled_start == '2':
-#             query = query.order_by('-scheduled_start')
-#         else:
-#             query = query.order_by('-id')
-#         return query
-    
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['project_name'] = self.request.GET.get('project_name', '')
-#         context['status'] = self.request.GET.get('status', '')
-#         scheduled_start = self.request.GET.get('scheduled_start', '0')
-#         context['scheduled_start'] = scheduled_start
-#         context['ascending'] = scheduled_start == '1'
-#         context['descending'] = scheduled_start == '2'
-#         return context
-    
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Q
+from django.utils.timezone import localdate
+from .models import Task, Project, Holiday
+from .utils import business_day_count
+from datetime import date as date_cls
+from django.db import transaction
+from django.db.models import F
+from datetime import timedelta
+from .forms import ProjectForm, TaskForm, TaskUpdateForm  
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'app/project_list.html'
@@ -74,12 +52,15 @@ class ProjectListView(LoginRequiredMixin, ListView):
             query = query.order_by('-scheduled_start')
         else:
             query = query.order_by('-id')
+        
+        query = query.annotate(task_count=Count('tasks', distinct=True))
 
         return query
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = Project
-    fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    form_class = ProjectForm 
+    # fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
     template_name = 'app/add_project.html'
     success_url = reverse_lazy('app:project_list')
     
@@ -95,7 +76,8 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
 class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     model = Project
-    fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    form_class = ProjectForm 
+    # fields = ['project_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
     template_name = 'app/update_project.html'
     def get_success_url(self):
         # return reverse_lazy('app:project_list', kwargs={'user_id': UpdateView.self.object.pk})
@@ -152,7 +134,8 @@ class TaskListView(LoginRequiredMixin, ListView):
         
 class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
-    fields = ['task_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    form_class = TaskForm
+    # fields = ['task_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
     template_name = 'app/add_task.html'
     
     def get_context_data(self, **kwargs):
@@ -174,15 +157,48 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
 
 class TaskUpdateView(UpdateView):
     model = Task
-    fields = ['task_name', 'scheduled_start', 'scheduled_end', 'achievement_start', 'achievement_end', 'status']
+    form_class = TaskUpdateForm  # ★ 編集用フォームに切り替え（チェックボックス付き）
     template_name = 'app/update_task.html'
+
     def get_success_url(self):
         return reverse_lazy('app:task', kwargs={'project_id': self.object.project_id.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['project_id'] = self.object.project_id.id # タスクが紐づいているプロジェクトID
+        context['project_id'] = self.object.project_id.id
         return context
+
+    @transaction.atomic
+    def form_valid(self, form):
+        obj = self.get_object()
+        old_start = obj.scheduled_start
+        old_end   = obj.scheduled_end
+
+        # まず保存して新しい値を確定
+        response = super().form_valid(form)
+
+        new_start = self.object.scheduled_start
+        new_end   = self.object.scheduled_end
+
+        # チェックが入っている & 開始予定が実際に変わったときだけ連動
+        if form.cleaned_data.get('shift_following', False) and old_start and new_start:
+            delta = new_start - old_start
+            if delta != timedelta(0):
+                # このタスク以外で、同一プロジェクト & 変更前開始日時以降をまとめて後ろ/前にシフト
+                (
+                    Task.objects
+                    .filter(
+                        project_id=self.object.project_id,
+                        scheduled_start__gte=old_start,
+                    )
+                    .exclude(pk=self.object.pk)  # このタスク自身は手で修正済みなので除外
+                    .update(
+                        scheduled_start=F('scheduled_start') + delta,
+                        scheduled_end=F('scheduled_end') + delta,
+                    )
+                )
+
+        return response
 
 class TaskDeleteView(DeleteView):
     model = Task
@@ -198,3 +214,81 @@ class TaskDeleteView(DeleteView):
         context['task'] = task  # 明示的にtaskをテンプレートへ渡す
         context['project_id'] = task.project_id.id     # ← ここでproject_idも追加
         return context
+    
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "app/dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        user = self.request.user
+        today = localdate()
+        holidays = set(Holiday.objects.values_list("date", flat=True))
+
+        # ▼ このユーザーのタスクだけを対象にする
+        tasks_qs = (
+            Task.objects
+            .select_related("project_id")
+            .filter(project_id__user_id=user)     # ← ここが重要
+        )
+
+        # KPI（ステータスは日本語）
+        agg = tasks_qs.aggregate(
+            total=Count("id"),
+            todo=Count("id", filter=Q(status="未着手")),
+            doing=Count("id", filter=Q(status="進行中")),
+            done=Count("id", filter=Q(status="完了")),
+            overdue=Count("id", filter=Q(
+                # DateTimeField と比較するので date 抜き出しで比較
+                scheduled_end__date__lt=today,
+                status__in=["未着手", "進行中"],
+            )),
+        )
+
+        # プロジェクト別タスク数（上位10）
+        per_project = (
+            tasks_qs.values("project_id__project_name")
+                    .annotate(count=Count("id"))
+                    .order_by("-count")[:10]
+        )
+
+        # 稼働日数テーブル用
+        rows = []
+        tasks = tasks_qs.only(
+            "id", "task_name", "status",
+            "scheduled_start", "scheduled_end",
+            "project_id__project_name",
+        )
+
+        for t in tasks:
+            s_start = t.scheduled_start.date() if getattr(t.scheduled_start, "date", None) else t.scheduled_start
+            s_end   = t.scheduled_end.date()   if getattr(t.scheduled_end, "date", None)   else t.scheduled_end
+
+            work_all = business_day_count(s_start, s_end, holidays)
+
+            if s_start:
+                end_for_elapsed = min(today, s_end) if s_end else today
+                elapsed = business_day_count(s_start, end_for_elapsed, holidays)
+            else:
+                elapsed = None
+
+            remaining = (work_all - elapsed) if (work_all is not None and elapsed is not None) else None
+
+            rows.append({
+                "project": getattr(t.project_id, "project_name", "-"),
+                "task_name": t.task_name,
+                "status": t.status,
+                "scheduled_start": s_start,
+                "scheduled_end": s_end,
+                "work_all": work_all,
+                "elapsed": elapsed,
+                "remaining": remaining,
+                "overdue": bool(s_end and s_end < today and t.status in ["未着手", "進行中"]),
+            })
+
+        ctx.update({
+            "agg": agg,
+            "per_project": list(per_project),
+            "rows": rows,
+        })
+        return ctx

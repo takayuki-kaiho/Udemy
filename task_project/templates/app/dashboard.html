@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-4">
+  <h2 class="mb-4">ダッシュボード</h2>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 text-muted">総タスク</div>
+          <div class="h3">{{ agg.total|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 text-muted">未着手</div>
+          <div class="h3">{{ agg.todo|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 text-muted">進行中</div>
+          <div class="h3">{{ agg.doing|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 text-muted">期限超過</div>
+          <div class="h3">{{ agg.overdue|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 mb-3">ステータス内訳</div>
+          <canvas id="statusChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="h6 mb-3">プロジェクト別タスク数（上位10）</div>
+          <canvas id="projectChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="h6 mb-3">タスク稼働日数一覧</div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>プロジェクト</th>
+              <th>タスク名</th>
+              <th>ステータス</th>
+              <th>開始予定</th>
+              <th>終了予定</th>
+              <th>総稼働日</th>
+              <th>経過稼働日</th>
+              <th>残り稼働日</th>
+              <th>期限超過</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in rows %}
+            <tr class="{% if r.overdue %}table-danger{% endif %}">
+              <td>{{ r.project }}</td>
+              <td>{{ r.task_name }}</td>
+              <td>{{ r.status }}</td>
+              <td>{{ r.scheduled_start|date:"Y年m月d日" }}</td>
+              <td>{{ r.scheduled_end|date:"Y年m月d日" }}</td>
+              <td>{{ r.work_all|default:"-" }}</td>
+              <td>{{ r.elapsed|default:"-" }}</td>
+              <td>{{ r.remaining|default:"-" }}</td>
+              <td>{% if r.overdue %}⚠{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="9" class="text-muted">データがありません</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js（CDN） -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+  const statusData = {
+    labels: ["未着手","進行中","完了"],
+    counts: [{{ agg.todo|default:0 }}, {{ agg.doing|default:0 }}, {{ agg.done|default:0 }}]
+  };
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: statusData.labels, datasets: [{ data: statusData.counts }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  const projLabels = [{% for p in per_project %}"{{ p.project_id__project_name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const projCounts = [{% for p in per_project %}{{ p.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  new Chart(document.getElementById('projectChart'), {
+    type: 'bar',
+    data: { labels: projLabels, datasets: [{ data: projCounts }] },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { autoSkip: false } } }
+    }
+  });
+</script>
+{% endblock %}
